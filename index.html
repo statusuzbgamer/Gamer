@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="uz"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>O'zbek gamerlar: jonli obunachilar</title>
+<style>
+:root{--bg:#fff;--card:#f2f2f2;--fg:#0f0f0f;--mut:#606060;--red:#e60026;--up:#0a8f3c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f0f0f;--card:#1f1f1f;--fg:#f1f1f1;--mut:#aaa;--up:#3ddc84}}
+:root[data-theme="dark"]{--bg:#0f0f0f;--card:#1f1f1f;--fg:#f1f1f1;--mut:#aaa;--up:#3ddc84}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg);font-family:Roboto,Arial,sans-serif}
+main{max-width:640px;margin:0 auto;padding:16px}
+header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+h1{margin:0;font-size:clamp(20px,5.5vw,28px);line-height:1.15}
+.live{display:inline-flex;align-items:center;gap:6px;color:var(--red);font-weight:700;font-size:13px}
+.live i{width:9px;height:9px;border-radius:50%;background:var(--red);animation:p 1.4s infinite}
+@keyframes p{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.live i{animation:none}}
+#st{color:var(--mut);font-size:13px;margin:0 0 14px;min-height:18px}
+ol{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.row{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:16px;padding:12px}
+.rk{width:26px;text-align:center;font-weight:700;font-size:20px;color:var(--mut)}
+.row:first-child .rk{color:var(--red);font-size:26px}
+.row img{width:56px;height:56px;border-radius:50%;object-fit:cover;background:#888;flex:none}
+.nm{flex:1;min-width:0}
+.nm b{display:block;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nm small,.d{color:var(--mut);font-size:13px}
+.sb{text-align:right}
+.sb span{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.d{display:block;min-height:16px;color:var(--up);font-weight:700}
+button{font:inherit;background:var(--fg);color:var(--bg);border:0;border-radius:20px;padding:9px 16px;cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--red)}
+dialog{border:0;border-radius:18px;background:var(--bg);color:var(--fg);width:min(92vw,460px);padding:18px}
+dialog::backdrop{background:rgba(0,0,0,.6)}
+label{display:block;font-weight:700;margin:12px 0 4px}
+input,textarea{width:100%;font:inherit;padding:10px;border-radius:10px;border:1px solid var(--mut);background:var(--card);color:var(--fg)}
+textarea{height:160px}
+.hint{color:var(--mut);font-size:13px;margin:4px 0 0;line-height:1.4}
+.foot{color:var(--mut);font-size:12px;margin-top:16px;line-height:1.4}
+</style></head><body>
+<main>
+<header><div><h1>O'zbek gamerlar Top 10</h1><span class="live"><i></i>JONLI</span></div><button id="open">Sozlamalar</button></header>
+<p id="st">Yuklanmoqda…</p>
+<ol id="list"></ol>
+<p class="foot">Ma'lumot YouTube'dan har 30 soniyada yangilanadi. YouTube obunachi sonini yaxlitlab beradi (masalan, 77.1 ming), shuning uchun o'zgarish pog'ona bilan ko'rinadi.</p>
+</main>
+<dialog id="dlg">
+<h2 style="margin:0 0 4px">Sozlamalar</h2>
+<label for="key">YouTube API kalit</label>
+<input id="key" type="text" autocomplete="off" placeholder="AIza...">
+<p class="hint">Google Cloud'dan bepul olinadi (YouTube Data API v3).</p>
+<label for="hs">Kanallar (har qatorda bittadan @handle)</label>
+<textarea id="hs" placeholder="@kanalnomi"></textarea>
+<p class="hint">Eng ko'pi bilan 10 ta kanal qo'shing, tartib avtomatik tuziladi.</p>
+<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button id="cancel" style="background:var(--card);color:var(--fg)">Bekor</button><button id="save">Saqlash</button></div>
+</dialog>
+<script>
+const $=s=>document.querySelector(s);
+let cfg={key:'',handles:['@megatrend707','@kvadratniymapper','@specoolar','@ibogaming'],ids:{}};
+try{Object.assign(cfg,JSON.parse(localStorage.getItem('uzg')||'{}'))}catch(e){}
+const save=()=>{try{localStorage.setItem('uzg',JSON.stringify(cfg))}catch(e){}};
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>Math.round(n).toLocaleString('ru-RU');
+const base={},prev={};let busy=false;
+async function call(q){const r=await fetch('https://www.googleapis.com/youtube/v3/channels?'+q+'&key='+encodeURIComponent(cfg.key));const j=await r.json();if(j.error)throw new Error(j.error.message);return j.items||[]}
+function tween(el,a,b){const t0=performance.now();(function f(t){const k=Math.min(1,(t-t0)/900);el.textContent=fmt(a+(b-a)*k);if(k<1)requestAnimationFrame(f)})(t0)}
+function render(rows){
+$('#list').innerHTML=rows.map((r,i)=>{const d=r.subs-base[r.id];
+return `<li class="row"><span class="rk">${i+1}</span><img src="${esc(r.img)}" alt="" onerror="this.style.visibility='hidden'"><div class="nm"><b>${esc(r.name)}</b><small>${esc(r.h)}</small></div><div class="sb"><span data-id="${r.id}">${fmt(r.subs)}</span><span class="d">${d>0?'+'+fmt(d):''}</span></div></li>`}).join('');
+rows.forEach(r=>{const el=document.querySelector('[data-id="'+r.id+'"]');if(el&&prev[r.id]!==undefined&&prev[r.id]!==r.subs)tween(el,prev[r.id],r.subs);prev[r.id]=r.subs})}
+async function tick(){
+if(busy)return;if(!cfg.key){$('#st').textContent='Avval sozlamalarda API kalitni kiriting.';return}
+busy=true;const miss=[];
+try{
+const hs=cfg.handles.slice(0,10);
+for(const h of hs){if(!cfg.ids[h]){const it=await call('part=id&forHandle='+encodeURIComponent(h));if(it[0])cfg.ids[h]=it[0].id;else miss.push(h)}}
+save();
+const map={};hs.forEach(h=>{if(cfg.ids[h])map[cfg.ids[h]]=h});
+const ids=Object.keys(map);
+if(!ids.length)throw new Error('Kanal topilmadi. @handle ni tekshiring.');
+const items=await call('part=snippet,statistics&id='+ids.join(','));
+const rows=items.map(c=>({id:c.id,h:map[c.id],name:c.snippet.title,img:(c.snippet.thumbnails.medium||c.snippet.thumbnails.default).url,subs:+c.statistics.subscriberCount||0})).sort((a,b)=>b.subs-a.subs);
+rows.forEach(r=>{if(base[r.id]===undefined)base[r.id]=r.subs});
+render(rows);
+$('#st').textContent='Yangilandi: '+new Date().toLocaleTimeString('uz')+(miss.length?'  ·  Topilmadi: '+miss.join(', '):'');
+}catch(e){$('#st').textContent='Xato: '+e.message}
+busy=false}
+const dlg=$('#dlg');
+function openS(){$('#key').value=cfg.key;$('#hs').value=cfg.handles.join('\n');dlg.showModal()}
+$('#open').onclick=openS;$('#cancel').onclick=()=>dlg.close();
+$('#save').onclick=()=>{cfg.key=$('#key').value.trim();
+cfg.handles=$('#hs').value.split(/\n+/).map(s=>s.trim()).filter(Boolean).map(s=>s[0]==='@'?s:'@'+s).slice(0,10);
+cfg.ids={};save();dlg.close();tick()};
+setInterval(()=>{if(!document.hidden)tick()},30000);
+tick();if(!cfg.key)setTimeout(openS,300);
+</script></body></html>
